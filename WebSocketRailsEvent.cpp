@@ -1,49 +1,55 @@
 #include "WebSocketRailsEvent.h"
 
-WebSocketRailsEvent::WebSocketRailsEvent(WebSocketRailsEventPayload data, 
+WebSocketRailsEvent::WebSocketRailsEvent() {
+
+}
+
+WebSocketRailsEvent::WebSocketRailsEvent(WebSocketRailsEventPayload payload, 
 	EventCompletionBlock success, EventCompletionBlock failure) {
 
-	init(data, success, failure);
+	init(payload, success, failure);
 }
 
-WebSocketRailsEvent::WebSocketRailsEvent(WebSocketRailsEventPayload data) {
+WebSocketRailsEvent::WebSocketRailsEvent(WebSocketRailsEventPayload payload) {
 
-	init(data, NULL, NULL);
+	init(payload, NULL, NULL);
 }
     
-void WebSocketRailsEvent::init() {
+void WebSocketRailsEvent::init(WebSocketRailsEventPayload payload, 
+	EventCompletionBlock successCallback, EventCompletionBlock failureCallback) {
 
- 	name = data[0];
- 	attr = data[1];
- 	if (attr)
+ 	name = payload.getEventName();
+	connectionId = payload.getConnectionId();
+
+ 	data = payload.getData();
+ 	if (data != NULL)
  	{
- 		if (attr.contains("id") && attr["id"] != NULL)
+		JsonParser<16> parser;
+
+		char buffer[data.length() + 1];
+		data.toCharArray(buffer, data.length() + 1);
+
+		JsonObject attr = parser.parse(buffer);
+
+ 		if (attr["id"].success())
  			id = attr["id"];
  		else
  			id = rand();
  		
- 		if (attr.contains("channel") && attr["channel"] != NULL)
- 			channel = attr["channel"];
+		channel = attr["channel"];
  		
- 		if (attr.contains("data") && attr["data"] != NULL)
- 			data = attr["data"];
+		data = attr["data"];
  		
- 		if (attr.contains("token") && attr[@"token"] != NULL)
- 			token = attr["token"];
+		token = attr["token"];
  		
- 		if (data[2] != NULL)
- 			connectionId = data[2];
- 		else
- 			connectionId = 0;
- 		
- 		if (attr.contains("success") && attr["success"] != NULL) {
+ 		if (attr["success"].success()) {
  			result = true;
- 			success = (bool) attr["success"];
+ 			success = attr["success"];
  		}
  	}
  	
- 	this.successCallback = success;
- 	this.failureCallback = failure;
+ 	this->successCallback = successCallback;
+ 	this->failureCallback = failureCallback;
 }
 
 bool WebSocketRailsEvent::isChannel() {
@@ -57,14 +63,14 @@ bool WebSocketRailsEvent::isResult() {
 
 bool WebSocketRailsEvent::isPing() {
 	
-	return "websocket_rails.ping".equals(name);	
+	return name.equals("websocket_rails.ping");	
 }
 
 String WebSocketRailsEvent::serialize() {
 	
 }
 
-HashMap<String, String> WebSocketRailsEvent::attributes() {
+HashMap<String, String, HASH_SIZE> WebSocketRailsEvent::attributes() {
 	
 }
 
@@ -81,4 +87,9 @@ void WebSocketRailsEvent::runCallbacks(bool success, String eventData) {
 bool WebSocketRailsEvent::isSuccess() {
 
 	return success;
+}
+
+bool WebSocketRailsEvent::operator==(WebSocketRailsEvent otherEvent) {
+
+	return this->getId() == otherEvent.getId();
 }

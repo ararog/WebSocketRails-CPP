@@ -4,8 +4,8 @@
 #include <string.h>
 #include <stdlib.h>
 #include <WString.h>
+#include <Arduino.h>
 #include <HashMap/HashMap.h>
-#include "Arduino.h"
 
 class WebSocketRailsEventPayload
 {
@@ -13,13 +13,13 @@ class WebSocketRailsEventPayload
     WebSocketRailsEventPayload();
 	String getEventName();
 	void setEventName(String name);
-	JsonObject getData();
-	void setData(JsonObject data);
+	String getData();
+	void setData(String data);
 	String getConnectionId();
 	void setConnectionId(String connectionId);
   private:
   	String eventName;
-  	JsonObject data;
+  	String data;
   	String connectionId;
 };
 

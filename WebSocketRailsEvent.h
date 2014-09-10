@@ -4,9 +4,9 @@
 #include <string.h>
 #include <stdlib.h>
 #include <WString.h>
+#include <Arduino.h>
 #include <ArduinoJson/JsonParser.h>
 #include <HashMap/HashMap.h>
-#include "Arduino.h"
 #include "WebSocketRailsTypes.h"
 #include "WebSocketRailsEventPayload.h"
 
@@ -15,31 +15,39 @@ using namespace ArduinoJson::Parser;
 class WebSocketRailsEvent
 {
   public:
-    WebSocketRailsEvent(WebSocketRailsEventPayload data, EventCompletionBlock success, EventCompletionBlock failure);   
+	WebSocketRailsEvent();
 	WebSocketRailsEvent(WebSocketRailsEventPayload data);
+    WebSocketRailsEvent(WebSocketRailsEventPayload data, 
+		EventCompletionBlock successCallback, 
+		EventCompletionBlock failureCallback);   
     bool isChannel();
     bool isResult();
     bool isPing();
     String serialize();  
     HashMap<String, String, HASH_SIZE> attributes();
-    void runCallbacks(bool success, JsonObject eventData);    
+    void runCallbacks(bool success, String eventData);    
     String getName();
     int getId();
     String getChannel();
-	JsonObject getData();
+	String getData();
 	bool isSuccess();
+	bool operator==(WebSocketRailsEvent otherEvent);
     
   private:
-	void init(WebSocketRailsEventPayload data, EventCompletionBlock success, EventCompletionBlock failure);   
+	void init(WebSocketRailsEventPayload data, 
+		EventCompletionBlock successCallback, 
+		EventCompletionBlock failureCallback);   
+	EventCompletionBlock successCallback;
+	EventCompletionBlock failureCallback;
   	String name;     
   	String attr;
   	int id;
   	String channel;
-  	JsonObject data;
+  	String data;
   	String token;
   	String connectionId;
   	bool success;
-  	bool result;  	  
+  	bool result;  	
 };
 
 #endif

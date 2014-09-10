@@ -1,6 +1,10 @@
 #include "WebSocketRailsEventPayload.h"
 
-WebSocketRailsEventPayload::String getEventName() {
+WebSocketRailsEventPayload::WebSocketRailsEventPayload() {
+
+}
+
+String WebSocketRailsEventPayload::getEventName() {
 
 }
 
@@ -8,11 +12,11 @@ void WebSocketRailsEventPayload::setEventName(String name) {
 
 }
 
-JsonObject WebSocketRailsEventPayload::getData() {
+String WebSocketRailsEventPayload::getData() {
 
 }
 
-void WebSocketRailsEventPayload::setData(JsonObject data) {
+void WebSocketRailsEventPayload::setData(String data) {
 
 }
 

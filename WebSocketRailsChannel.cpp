@@ -1,28 +1,39 @@
 #include "WebSocketRailsChannel.h"
+#include "WebSocketRailsDispatcher.h"
 #include "WebSocketRailsEventPayload.h"
 
-WebSocketRailsChannel::WebSocketRailsChannel(String channelName, 
-	WebSocketRailsDispatcher dispatcher, bool isPrivate) {
+WebSocketRailsChannel::WebSocketRailsChannel() {
 
-	String eventName = NULL;
+}
+
+WebSocketRailsChannel::WebSocketRailsChannel(String channelName, 
+	WebSocketRailsDispatcher* dispatcher, bool isPrivate) {
+
+	String eventName = "";
 	if (isPrivate)
 		eventName = "websocket_rails.subscribe_private";
 	else
 		eventName = "websocket_rails.subscribe";
 	
-	this.isPrivate = isPrivate;
-	this.channelName = channelName;
-	this.dispatcher = dispatcher;
+	this->_private = isPrivate;
+	this->channelName = channelName;
+	this->dispatcher = dispatcher;
 
-	WebSocketRailsEventPayload payload = WebSocketRailsEventPayload();
+	Generator::JsonObject<1> frame;
+	frame["channel"] = channelName;
+
+	char buffer[256];
+	frame.printTo(buffer, sizeof(buffer));
+
+	WebSocketRailsEventPayload payload;
 	payload.setEventName(eventName);
-	payload.setData({"channel" : channelName});
-	payload.setConnectionId(dispatcher.getConnectionId());
+	payload.setData(buffer);
+	payload.setConnectionId(dispatcher->getConnectionId());
 	
-	WebSocketRailsEvent event = WebSocketRailsEvent(payload, NULL, NULL);
+	WebSocketRailsEvent event(payload, NULL, NULL);
 
-	this.callbacks = HashMap<String, String, HASH_SIZE>();
-	dispatcher.triggerEvent(event);	
+	this->callbacks = HashMap<String, LinkedList<EventCompletionBlock>, HASH_SIZE>();
+	dispatcher->triggerEvent(event);	
 }
 
 void WebSocketRailsChannel::bind(String eventName, EventCompletionBlock callback) {
@@ -34,29 +45,37 @@ void WebSocketRailsChannel::bind(String eventName, EventCompletionBlock callback
 	eventCallbacks.add(callback);	
 }
 
-void WebSocketRailsChannel::trigger(String eventName, String message) {
+void WebSocketRailsChannel::trigger(String eventName, String data) {
 
-	HashMap<String, String, HASH_SIZE> data = HashMap<String, String, HASH_SIZE>();
-	data["channel"] = channelName;	
-	data["data"] = message;	
-	data["token"] = token;	
+	Generator::JsonObject<3> frame;
+	frame["channel"] = channelName;	
+	frame["data"] = data;	
+	frame["token"] = token;	
 
-	WebSocketRailsEventPayload payload = WebSocketRailsEventPayload();
+	char buffer[256];
+	frame.printTo(buffer, sizeof(buffer));
+
+	WebSocketRailsEventPayload payload;
 	payload.setEventName(eventName);
-	payload.setData(data);
-	payload.setConnectionId(dispatcher.getConnectionId());
+	payload.setData(buffer);
+	payload.setConnectionId(dispatcher->getConnectionId());
 
-	WebSocketRailsEvent event = WebSocketRailsEvent(payload, NULL, NULL);
+	WebSocketRailsEvent event(payload, NULL, NULL);
  	
- 	dispatcher.triggerEvent(event);	
+ 	dispatcher->triggerEvent(event);	
 }
 
 void WebSocketRailsChannel::dispatch(String eventName, 
-	HashMap<String, String, HASH_SIZE> message) {
+	String data) {
 	
 	if(eventName.equals("websocket_rails.channel_token")) {
-		HashMap<String, String, HASH_SIZE> info = (HashMap<String, String, HASH_SIZE>) message;
-		this.token = info["token"];
+		JsonParser<16> parser;	
+
+		char buffer[data.length() + 1];
+		data.toCharArray(buffer, data.length() + 1);
+
+		Parser::JsonObject frame = parser.parse(buffer);
+		this->token = frame["token"];
 	}
 	else {
 		if (! callbacks.contains(eventName))
@@ -65,7 +84,7 @@ void WebSocketRailsChannel::dispatch(String eventName,
 		LinkedList<EventCompletionBlock> eventCallbacks = callbacks[eventName];
 		for(int i = 0; i < eventCallbacks.size(); i++){
 			EventCompletionBlock callback = eventCallbacks.get(i);
-			callback(message);
+			callback(data);
 		}
 	}	
 }
@@ -74,18 +93,23 @@ void WebSocketRailsChannel::destroy() {
 	
 	String eventName = "websocket_rails.unsubscribe";
 
-	WebSocketRailsEventPayload payload = WebSocketRailsEventPayload();
-	payload.setEventName(eventName);
-	payload.setData({"channel" : channelName});
-	payload.setConnectionId(dispatcher.getConnectionId());
+	Generator::JsonObject<1> frame;
+	frame["channel"] = channelName;
 
-	WebSocketRailsEvent event = WebSocketRailsEvent(payload);
+	char buffer[256];
+	frame.printTo(buffer, sizeof(buffer));
+
+	WebSocketRailsEventPayload payload;
+	payload.setEventName(eventName);
+	payload.setData(buffer);
+	payload.setConnectionId(dispatcher->getConnectionId());
+
+	WebSocketRailsEvent event(payload);
 		
-	dispatcher.triggerEvent(event);
-	callbacks.clear();	
+	dispatcher->triggerEvent(event);
 }
 
 bool WebSocketRailsChannel::isPrivate() {
 	
-	return private;
+	return _private;
 }

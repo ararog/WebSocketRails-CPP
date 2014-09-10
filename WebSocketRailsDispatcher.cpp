@@ -1,4 +1,5 @@
 #include "WebSocketRailsDispatcher.h"
+#include "WebSocketRailsTypes.h"
 
 WebSocketRailsDispatcher::WebSocketRailsDispatcher(String url) : connection(url, this) {
 	
@@ -38,20 +39,27 @@ void WebSocketRailsDispatcher::newMessage(LinkedList<WebSocketRailsEventPayload>
 			this->dispatch(event);
 		}
 		
-		if (state.equals("connecting") && String("client_connected").equals(event.getName()))
+		if (state.equals("connecting") && event.getName().equals("client_connected"))
 			this->connectionEstablished(event.getData());
 	}	
 }
 
-void WebSocketRailsDispatcher::connectionEstablished(JsonObject data) {
-	
+void WebSocketRailsDispatcher::connectionEstablished(String data) {
+
+	JsonParser<16> parser;	
+
+	char buffer[data.length() + 1];
+	data.toCharArray(buffer, data.length() + 1);
+
+	Parser::JsonObject message = parser.parse(buffer);
+
 	state = "connected";
-	connectionId = data["connection_id"];
+	connectionId = message["connection_id"];
 	connection.flushQueue();
 
 	WebSocketRailsEventPayload payload;
 	payload.setEventName("connection_opened");
-	payload.setData(NULL);
+	payload.setData("");
 	payload.setConnectionId(connectionId);
 
 	WebSocketRailsEvent connectionEstablishedEvent(payload);
@@ -67,7 +75,7 @@ void WebSocketRailsDispatcher::bind(String eventName, EventCompletionBlock callb
 	eventCallbacks.add(callback);	
 }
 
-void WebSocketRailsDispatcher::trigger(String eventName, JsonObject data, EventCompletionBlock success, EventCompletionBlock failure) {
+void WebSocketRailsDispatcher::trigger(String eventName, String data, EventCompletionBlock success, EventCompletionBlock failure) {
 	
 	WebSocketRailsEventPayload payload;
 	payload.setEventName(eventName);
@@ -122,18 +130,20 @@ void WebSocketRailsDispatcher::pong() {
 
 	WebSocketRailsEventPayload payload;
 	payload.setEventName("websocket_rails.pong");
-	payload.setData(NULL);
+	payload.setData("");
 	payload.setConnectionId(connectionId);
 
 	WebSocketRailsEvent pong(payload);
 	connection.trigger(pong);	
 }
   	
-void WebSocketRailsDispatcher::connect() {
-	connection.connect();
+void WebSocketRailsDispatcher::connect(Client &client) {
+
+	connection.connect(client);
 }
 
 void WebSocketRailsDispatcher::disconnect() {
+
 	connection.disconnect();
 }
 

@@ -4,14 +4,17 @@
 #include <string.h>
 #include <stdlib.h>
 #include <WString.h>
+#include <Arduino.h>
 #include <HashMap/HashMap.h>  
 #include <LinkedList/LinkedList.h>
-#include "Arduino.h"        
-#include "WebSocketRailsEvent.h"
-#include "WebSocketRailsEventPayload.h"
-#include "WebSocketRailsChannel.h"
 #include "WebSocketRailsTypes.h"
 #include "WebSocketRailsConnection.h"
+#include "WebSocketRailsChannel.h"
+#include "WebSocketRailsEvent.h"
+#include "WebSocketRailsEventPayload.h"
+#include "Client.h"
+
+using namespace ArduinoJson;
 
 class WebSocketRailsDispatcher
 {
@@ -20,18 +23,18 @@ class WebSocketRailsDispatcher
     void dispatch(WebSocketRailsEvent event);
     void newMessage(LinkedList<WebSocketRailsEventPayload> data);
     void bind(String eventName, EventCompletionBlock callback);
-    void trigger(String eventName, JsonObject data, EventCompletionBlock success, EventCompletionBlock failure);
+    void trigger(String eventName, String data, EventCompletionBlock success, EventCompletionBlock failure);
     void triggerEvent(WebSocketRailsEvent event);                                
     WebSocketRailsChannel subscribe(String channelName);
     void unsubscribe(String channelName);
-    void connect();                 
+    void connect(Client &client);                 
     void disconnect();       
 	String getState();
 	String getUrl();
 	HashMap<String, WebSocketRailsChannel, HASH_SIZE> getChannels();
 	String getConnectionId();    
   private:
-  	void connectionEstablished(JsonObject data);
+  	void connectionEstablished(String data);
   	void dispatchChannel(WebSocketRailsEvent event);
   	void pong();
   	HashMap<int, WebSocketRailsEvent, HASH_SIZE> queue;
